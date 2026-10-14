@@ -55,6 +55,11 @@ For every task, each hunk of the reference `patch` is mapped to the old-file lin
 base commit becomes a gold symbol. Added files, non-Python files and module-level edits are recorded
 separately rather than silently dropped (`results/gold.jsonl`).
 
+## Citation
+
+Nathaniel Shingleton (2026). *SWE-GraphBench: Auditing and Rebuilding Code Graphs for Local Software-Engineering Agents.*
+Gemma 4 Developer Agent Paper Track, Kaggle. Dataset: https://www.kaggle.com/datasets/nateshingleton/swe-graphbench
+
 ## License
 
 Apache-2.0. The competition data itself is governed by the competition rules and is not redistributed here.
