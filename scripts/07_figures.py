@@ -1,0 +1,111 @@
+"""Paper figures (static PNG/SVG for the Kaggle writeup). Light mode, reference palette.
+
+fig1_audit.png     one dot per released graph (68) for four structural metrics + median tick
+fig2_compare.png   Hit@5 and MRR per method, released vs rebuilt graph (tests filtered), 65 tasks, 95% CI
+fig3_unlocked.png  Hit@5 / Recall@10 / MRR on the 56 rich+requests tasks that have no released graph
+"""
+import json, sys
+from pathlib import Path
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+ROOT = Path(__file__).resolve().parents[1]
+RES, FIG = ROOT / "results", ROOT / "paper" / "figures"
+FIG.mkdir(parents=True, exist_ok=True)
+
+# reference palette (light)
+SURFACE, INK, INK2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
+S1, S2, S3 = "#2a78d6", "#eb6834", "#1baf7a"
+plt.rcParams.update({
+    "font.family": ["Segoe UI", "DejaVu Sans", "sans-serif"], "font.size": 9,
+    "axes.facecolor": SURFACE, "figure.facecolor": SURFACE, "axes.edgecolor": AXIS,
+    "axes.labelcolor": INK2, "xtick.color": MUTED, "ytick.color": MUTED, "text.color": INK,
+    "axes.spines.top": False, "axes.spines.right": False, "axes.grid": False,
+})
+
+
+def style(ax, xgrid=True):
+    if xgrid:
+        ax.grid(axis="x", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+    ax.tick_params(length=0)
+    ax.spines["left"].set_color(AXIS); ax.spines["bottom"].set_color(AXIS)
+
+
+# ---------------- Figure 1: audit strip plot ----------------
+def fig1():
+    rows = [json.loads(l) for l in (RES / "graph_audit.jsonl").open(encoding="utf-8")]
+    metrics = [("reciprocal_pair_frac", "call edges that are reciprocal"),
+               ("isolated_frac", "nodes with no edge"),
+               ("test_node_frac", "nodes that are test code"),
+               ("lib_node_frac", "nodes that are library code")]
+    fig, ax = plt.subplots(figsize=(6.4, 2.4))
+    import random
+    rng = random.Random(0)
+    for i, (k, label) in enumerate(metrics):
+        vals = [r[k] for r in rows]
+        y = [i + rng.uniform(-0.18, 0.18) for _ in vals]
+        ax.scatter(vals, y, s=14, color=S1, alpha=0.55, linewidths=0, zorder=3)
+        med = sorted(vals)[len(vals) // 2]
+        ax.plot([med, med], [i - 0.32, i + 0.32], color=INK, linewidth=2, zorder=4)
+        ax.text(1.02, i, f"median {med:.0%}", va="center", ha="left", fontsize=8, color=INK2, transform=ax.get_yaxis_transform())
+    ax.set_yticks(range(len(metrics))); ax.set_yticklabels([m[1] for m in metrics]); ax.invert_yaxis()
+    ax.set_xlim(-0.02, 1.02); ax.set_xticks([0, .25, .5, .75, 1]); ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"])
+    ax.set_xlabel(f"share, one dot per released graph (n = {len(rows)})")
+    style(ax)
+    fig.tight_layout(); fig.savefig(FIG / "fig1_audit.png", dpi=220); fig.savefig(FIG / "fig1_audit.svg")
+    print("fig1 done")
+
+
+# ---------------- Figure 2: released vs rebuilt ----------------
+def fig2():
+    s = json.loads((RES / "compare_graphs.json").read_text())
+    conds = [("released-notests", "released graph + embeddings", S1), ("rebuilt-notests-dir", "rebuilt graph (directed, no embeddings)", S2)]
+    methods = [("bm25_text", "BM25 (code text)"), ("symbol_seed", "symbol seed"), ("emb_expand", "embedding expand"), ("ppr", "PageRank"), ("hybrid", "hybrid (RRF)")]
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.6), sharey=True)
+    for ax, (metric, title) in zip(axes, [("hit@5", "Hit@5"), ("mrr", "MRR")]):
+        h = 0.36
+        for j, (cname, clabel, color) in enumerate(conds):
+            for i, (m, _) in enumerate(methods):
+                v = s[cname]["methods"][m][metric]; mean, (lo, hi) = v["mean"], v["ci95"]
+                y = i + (j - 0.5) * (h + 0.04)
+                ax.barh(y, mean, height=h, color=color, linewidth=0, label=clabel if i == 0 else None, zorder=3)
+                ax.plot([lo, hi], [y, y], color=INK, linewidth=0.8, zorder=4)
+                ax.text(mean + 0.012, y, f"{mean:.2f}", va="center", fontsize=7.5, color=INK2)
+        ax.set_yticks(range(len(methods))); ax.set_yticklabels([m[1] for m in methods]); ax.invert_yaxis()
+        ax.set_xlim(0, 0.85); ax.set_title(title, loc="left", fontsize=10, color=INK)
+        style(ax)
+    axes[0].legend(loc="lower right", frameon=False, fontsize=8)
+    n = s["released-notests"]["n_tasks"]
+    fig.suptitle(f"Symbol localization on the same {n} tasks, bars = mean, ticks = 95% bootstrap CI", x=0.01, ha="left", fontsize=9, color=INK2)
+    fig.tight_layout(); fig.savefig(FIG / "fig2_compare.png", dpi=220); fig.savefig(FIG / "fig2_compare.svg")
+    print("fig2 done")
+
+
+# ---------------- Figure 3: tasks unlocked ----------------
+def fig3():
+    s = json.loads((RES / "compare_graphs.json").read_text())
+    c = s["rebuilt-notests-NOREL"]
+    methods = [("bm25_text", "BM25 (code text)"), ("symbol_seed", "symbol seed"), ("ppr", "PageRank"), ("hybrid", "hybrid (RRF)")]
+    metrics = [("hit@5", "Hit@5", S1), ("recall@10", "Recall@10", S2), ("mrr", "MRR", S3)]
+    fig, ax = plt.subplots(figsize=(6.0, 2.4))
+    h = 0.24
+    for j, (metric, label, color) in enumerate(metrics):
+        for i, (m, _) in enumerate(methods):
+            v = c["methods"][m][metric]; y = i + (j - 1) * (h + 0.03)
+            ax.barh(y, v["mean"], height=h, color=color, linewidth=0, label=label if i == 0 else None, zorder=3)
+            ax.plot(v["ci95"], [y, y], color=INK, linewidth=0.8, zorder=4)
+            ax.text(v["mean"] + 0.012, y, f"{v['mean']:.2f}", va="center", fontsize=7.5, color=INK2)
+    ax.set_yticks(range(len(methods))); ax.set_yticklabels([m[1] for m in methods]); ax.invert_yaxis()
+    ax.set_xlim(0, 0.85); ax.legend(loc="lower right", frameon=False, fontsize=8)
+    ax.set_title(f"rich + requests: {c['n_tasks']} tasks with no released graph, rebuilt graph only", loc="left", fontsize=9, color=INK2)
+    style(ax)
+    fig.tight_layout(); fig.savefig(FIG / "fig3_unlocked.png", dpi=220); fig.savefig(FIG / "fig3_unlocked.svg")
+    print("fig3 done")
+
+
+if __name__ == "__main__":
+    which = sys.argv[1:] or ["1", "2", "3"]
+    for w in which:
+        {"1": fig1, "2": fig2, "3": fig3}[w]()
