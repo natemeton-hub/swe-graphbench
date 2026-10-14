@@ -1,0 +1,13 @@
+{
+  "id": "nateshingleton/swe-graphbench-embeddings",
+  "title": "SWE-GraphBench embeddings",
+  "code_file": "swe-graphbench-embeddings.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "false",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": ["nateshingleton/swe-graphbench"],
+  "competition_sources": ["gemma-4-developer-agent"],
+  "kernel_sources": []
+}

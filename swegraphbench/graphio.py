@@ -18,7 +18,22 @@ LIB_PREFIX = {  # which top-level dotted prefix is the *library* (vs tests/docs/
 
 
 def load_graph(path: Path) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    path = Path(path)
+    if path.suffix == ".gz":
+        import gzip
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            return json.load(f)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save_graph(g: dict, path: Path) -> None:
+    path = Path(path)
+    if path.suffix == ".gz":
+        import gzip
+        with gzip.open(path, "wt", encoding="utf-8") as f:
+            json.dump(g, f)
+    else:
+        path.write_text(json.dumps(g), encoding="utf-8")
 
 
 def load_embeddings(path: Path) -> tuple[list[str], np.ndarray]:
@@ -30,7 +45,11 @@ def load_embeddings(path: Path) -> tuple[list[str], np.ndarray]:
 
 def graph_key(path: Path) -> tuple[str, str]:
     """fastapi_<sha>.json -> ('fastapi', '<sha>')"""
-    stem = Path(path).stem
+    stem = Path(path).name
+    for suf in (".json.gz", ".json"):
+        if stem.endswith(suf):
+            stem = stem[: -len(suf)]
+            break
     repo, sha = stem.rsplit("_", 1)
     return repo, sha
 
