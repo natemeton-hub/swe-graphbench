@@ -6,7 +6,7 @@ Local coding agents built on Gemma 4 navigate repositories through a 32k-token w
 
 The Gemma 4 Developer Agent competition asks for an agent that fixes real GitHub issues offline on a single accelerator, with a 32,768-token context, a per-task tool-call budget and a 4 GiB sandbox. Under these constraints the first and most expensive sub-problem is localization: finding the few functions an issue is about before the context fills with irrelevant file reads. Agentless and graph-guided agents such as LocAgent report that most end-to-end failures on SWE-bench are localization failures and that a code graph is the most effective structure for narrowing a repository to a few candidates.
 
-The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with calls edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools. The artifacts themselves have not been examined, and because the hidden test set uses private repositories, an agent cannot bring a precomputed graph: whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
+The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with calls edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools. The artifacts themselves have not been examined, and because the hidden test set uses private repositories, whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
 
 This paper treats the released artifacts as an object of study and then fixes what the audit finds. Our contributions are:
 
