@@ -1,8 +1,8 @@
 TITLE (paste in Title field):
-SWE-GraphBench: Auditing and Rebuilding Code Graphs for Local Software-Engineering Agents
+SWE-GraphBench: Auditing and Rebuilding Code Graphs for Local SWE Agents
 
 SUBTITLE (paste in Subtitle field):
-A dependency-free graph builder, corrected graphs for every public task, and a symbol-level localization benchmark for the Gemma 4 Developer Agent release
+A dependency-free graph builder, corrected graphs for all 127 task commits, and a symbol-level localization benchmark for Gemma 4 agents
 
 PROJECT LINKS (add both):
 https://www.kaggle.com/datasets/nateshingleton/swe-graphbench
@@ -101,7 +101,7 @@ Conditions use the 65 FastAPI and httpx tasks with both a released graph and a g
 
 **Filtering tests is the single largest cheap win.** Removing test nodes from the candidate set raises BM25 Hit@5 on the released graph from 0.292 to 0.415 (paired 95% CI +0.03 to +0.22, sign test p = 0.02) and Recall@10 from 0.253 to 0.321 (p = 0.006). An agent fixing library code can apply this filter for free; the released graph's 64% test share makes it necessary.
 
-**The rebuilt graph helps on top of that, modestly.** With tests filtered in both, the rebuilt graph lifts the hybrid retriever from 0.431 to 0.492 Hit@5 and 0.350 to 0.403 Recall@10 (paired CI âˆ’0.01 to +0.12, 15 wins / 5 losses, p = 0.04) and PageRank MRR from 0.201 to 0.266. At 65 tasks not every metric's gain is individually significant. They come from two sources the audit predicted: the coverage ceiling rises from 0.854 to 1.0 because async and nested gold symbols now exist, and scope-resolved call edges give PageRank a cleaner neighbourhood. End to end, from the graph as shipped to the rebuilt filtered graph, the hybrid retriever gains +0.154 Hit@5 (CI +0.05 to +0.26, p = 0.02) and +0.134 Recall@10 (CI +0.07 to +0.21, p < 0.001).
+**The rebuilt graph helps on top of that, modestly.** With tests filtered in both, the rebuilt graph lifts the hybrid retriever from 0.431 to 0.492 Hit@5 and 0.350 to 0.403 Recall@10 (paired CI Ã¢Ë†â€™0.01 to +0.12, 15 wins / 5 losses, p = 0.04) and PageRank MRR from 0.201 to 0.266. At 65 tasks not every metric's gain is individually significant. They come from two sources the audit predicted: the coverage ceiling rises from 0.854 to 1.0 because async and nested gold symbols now exist, and scope-resolved call edges give PageRank a cleaner neighbourhood. End to end, from the graph as shipped to the rebuilt filtered graph, the hybrid retriever gains +0.154 Hit@5 (CI +0.05 to +0.26, p = 0.02) and +0.134 Recall@10 (CI +0.07 to +0.21, p < 0.001).
 
 **Edge direction does not help seed expansion.** Propagating from BM25 seeds toward callees only is worse than undirected propagation (PageRank Hit@5 0.369 vs 0.431), and toward callers only is worse still (0.338). Gold symbols are as often callers of a mentioned symbol as callees, so for expansion direction is best kept available but not enforced; it remains essential for tool semantics, since `get_code_neighbors` can finally answer "who calls this".
 
