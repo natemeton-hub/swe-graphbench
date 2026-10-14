@@ -26,24 +26,24 @@ Everything is deterministic and runs on a laptop CPU. We keep language models ou
 
 **Task source.** SWE-bench (Jimenez et al., 2024) and its Lite and Verified subsets define the issue-to-patch task we inherit; SWE-Gym (Pan et al., 2025) and SWE-smith (Yang et al., 2025) scale training data for it. We change the label from "tests pass" to "the symbols the reference patch edits", scoring retrieval rather than resolution.
 
-**Localization as a sub-problem.** Agentless (Xia et al., 2024) measures how often hierarchical localization contains the ground-truth file and elements; LocAgent (Chen et al., 2025) introduces Loc-Bench with function-level Acc@k over a self-built code graph; SweRank (Reddy et al., 2026) shows trained retrieve-and-rerank can match agents; CoSIL (Jiang et al., 2025), OrcaLoca (Yu et al., 2025), KGCompass (Yang et al., 2025), GraphLocator (Liu et al., 2026) and RepoNavigator (Zhang et al., 2025) localize over graphs they construct, and ARISE (Seddik et al., 2026) packages such a graph as an agent toolset. GREPO (Wang et al., 2026) is the closest academic benchmark: class- and function-level localization over repository graphs with Hit@K, built from 86 repositories for GNN training. None study an *externally supplied, fixed* graph or report its coverage ceiling, which is the situation a competition agent faces. RepoGraph (Ouyang et al., 2025), CodexGraph (Liu et al., 2025), CodeRAG (Li et al., 2025), GraphCoder (Liu et al., 2024), RepoCoder (Zhang et al., 2023) and CodePlan (Bairi et al., 2023) use dependency structure for generation; our personalized-PageRank baseline is the LLM-free analogue of their relevance propagation.
+**Localization as a sub-problem.** Agentless (Xia et al., 2024) measures how often hierarchical localization contains the ground-truth file and elements; LocAgent (Chen et al., 2025) introduces Loc-Bench with function-level Acc@k over a self-built code graph; SweRank (Reddy et al., 2026) shows trained retrieve-and-rerank can match agents; CoSIL (Jiang et al., 2025), OrcaLoca (Yu et al., 2025), KGCompass (Yang et al., 2025), GraphLocator (Liu et al., 2026) and RepoNavigator (Zhang et al., 2025) localize over graphs they construct, and ARISE (Seddik et al., 2026) packages such a graph as an agent toolset. GREPO (Wang et al., 2026) is the closest academic benchmark: class- and function-level localization over repository graphs with Hit@K, built from 86 repositories for GNN training. None study an *externally supplied, fixed* graph or report its coverage ceiling, which is the situation a competition agent faces. RepoGraph (Ouyang et al., 2025), CodexGraph (Liu et al., 2025), CodeRAG (Li et al., 2025), GraphCoder (Liu et al., 2024), RepoCoder (Zhang et al., 2023) and CodePlan (Bairi et al., 2023) use dependency structure for generation; our PageRank baseline is their LLM-free analogue.
 
 **Concurrent competition entries.** Two public paper-track repositories independently compare BM25, embedding and one-hop graph retrieval on the released artifacts with patch-derived gold (aghasalim, 2026; satiricalguru, 2026); both note that `search_similar_code` only accepts symbol names. Our audit confirms and extends their observations (edge direction, hoisting collisions, missing async definitions, no location attributes, absent graphs for two repositories). What we add is the corrected resource: a sandbox-runnable builder, graphs for every task, a frozen gold set with MRR and paired statistics, and a released-versus-rebuilt comparison under identical conditions.
 
 ## 3. The released artifacts: an audit
 
-*Setup.* The public release contains `tasks.jsonl` (129 tasks: 67 `fastapi/fastapi`, 48 `Textualize/rich`, 13 `psf/requests`, 1 `encode/httpx`), 68 graph files and 127 embedding files keyed by `<repo>_<sha>`. We cloned the four repositories and verified that every base commit resolves. All numbers come from `scripts/02_audit_coverage.py` and `scripts/06_node_mapping_audit.py`.
+*Setup.* The public release contains `tasks.jsonl` (129 tasks: 67 `fastapi/fastapi`, 48 `Textualize/rich`, 13 `psf/requests`, 1 `encode/httpx`), 68 graph files and 127 embedding files keyed by `<repo>_<sha>`. We cloned the four repositories and verified that every base commit resolves; all numbers come from scripts 02 and 06 in the repository.
 
 **Availability.** Graphs exist for the 67 FastAPI commits and the single httpx commit only. The 61 rich and requests tasks have embeddings but no graph, and because the harness enables the tools only when both files exist, agents on those tasks receive no code-intelligence tool.
 
 **Structure (Figure 1).** Every graph has a single edge type, `calls`. In all 68 graphs, 100% of edge pairs are reciprocal: for every `A calls B` there is a `B calls A`, so `get_code_neighbors` cannot distinguish callers from callees. A median 68% of nodes are isolated (3% for httpx to 72%), a median 64% are test functions and only 9% belong to the library package. The highest-degree node in every FastAPI graph is the `FastAPI` class (degree 123), suggesting calls resolved by name matching rather than scope.
 
 ![Figure 1](figures/fig1_audit.png)
-*Figure 1. Four structural measures of each released graph (one dot per graph, n = 68) with medians.*
+*Figure 1. Four structural measures of the 68 released graphs, one dot per graph.*
 
 **Node attributes and identifiers.** Nodes carry only `id`, `name` and `text`: no file path, line number, kind or parent, so an agent that finds a symbol still needs a grep to open it. Comparing node sets against an `ast` walk of the same commit (Section 4.2) shows three systematic omissions: (i) `async def` is not a node: 69,845 of 70,070 async definitions across the 68 commits (99.7%) are absent, including FastAPI's `solve_dependencies`, `serialize_response` and the request-handler closure `app`; (ii) nested synchronous functions are hoisted to their enclosing class or module (8,034 released ids), so distinct closures share one identifier (`fastapi.applications.FastAPI.decorator` stands for two different inner functions) and 2,095 released ids are ambiguous; (iii) 2,289 released ids (0.9%) have no counterpart at all. Overall 25.0% of the 341,563 definitions present at those commits have no released node.
 
-**Embeddings.** Each archive maps symbol name to a 256-d `float32` vector; keys match the graph's node ids exactly. Vectors are unnormalized and deterministic in the node text: 14.6% of rows in a FastAPI archive are exact duplicates, all with identical source text. The embedding model is undocumented, and because the sandbox has no encoder, `search_similar_code` must be queried with a symbol name, never with issue text.
+**Embeddings.** Each archive maps symbol name to a 256-d `float32` vector; keys match the node ids exactly. Vectors are unnormalized and deterministic in the node text: 14.6% of rows in a FastAPI archive are exact duplicates, all with identical source. The model is undocumented, and because the sandbox has no encoder, `search_similar_code` must be queried with a symbol name, never with issue text.
 
 **Coverage of what fixes edit.** On the 65 tasks with a graph and at least one gold symbol (Section 4.1), 85.3% of gold symbols exist as nodes and 78.8% also have an edge; 45 of 65 tasks have every gold symbol represented and 4 have none. Missing gold symbols are almost all async or nested definitions.
 
@@ -75,7 +75,7 @@ Each condition may drop test nodes from the candidate set, a filter any library-
 
 ### 5.1 Released versus rebuilt graphs
 
-All conditions use the 65 FastAPI and httpx tasks that have both a released graph and a gold symbol, except Section 5.2. Table 1 gives means, Figure 2 adds confidence intervals, and `results/paired_stats.json` holds paired bootstrap intervals and sign tests for every contrast.
+Conditions use the 65 FastAPI and httpx tasks with both a released graph and a gold symbol (Section 5.2 excepted). Table 1 gives means, Figure 2 confidence intervals, and `results/paired_stats.json` paired bootstrap intervals and sign tests for every contrast.
 
 **Table 1.** Hit@5 / Recall@10 / MRR on the same 65 tasks. "Cov." is the coverage ceiling (share of gold symbols that are nodes).
 
@@ -83,14 +83,13 @@ All conditions use the 65 FastAPI and httpx tasks that have both a released grap
 |---|---|---|---|---|---|---|---|
 | released | kept | 0.854 | .292 / .253 / .189 | .215 / .122 / .172 | .215 / .141 / .179 | .354 / .275 / .167 | .338 / .269 / .238 |
 | released | filtered | 0.854 | .415 / .321 / .280 | .231 / .137 / .182 | .231 / .152 / .190 | .369 / .312 / .201 | .431 / .350 / .295 |
-| rebuilt | kept | 1.000 | .308 / .287 / .212 | .215 / .133 / .181 | n/a | .369 / .282 / .214 | .415 / .332 / .284 |
 | rebuilt | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .431 / .337 / .266 | **.492 / .403 / .299** |
 | rebuilt, PPR to callees | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .369 / .341 / .249 | .446 / .394 / .314 |
 | rebuilt, PPR to callers | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .338 / .345 / .261 | .385 / .374 / .292 |
 | rebuilt + released emb. | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | .200 / .122 / .179 | .431 / .337 / .266 | .477 / .403 / .294 |
 
 ![Figure 2](figures/fig2_compare.png)
-*Figure 2. Hit@5 and Recall@10 on the same 65 tasks for the released graph as shipped, the released graph with test nodes filtered, and the rebuilt graph with test nodes filtered. Ticks are 95% bootstrap intervals.*
+*Figure 2. Hit@5 and Recall@10 on the same 65 tasks; ticks are 95% bootstrap intervals.*
 
 **Filtering tests is the single largest cheap win.** Removing test nodes from the candidate set raises BM25 Hit@5 on the released graph from 0.292 to 0.415 (paired 95% CI +0.03 to +0.22, sign test p = 0.02) and Recall@10 from 0.253 to 0.321 (p = 0.006). An agent fixing library code can apply this filter for free; the released graph's 64% test share makes it necessary.
 
@@ -109,7 +108,7 @@ On the 56 rich and requests tasks with gold symbols and no released graph, the r
 
 ## 6. Limitations
 
-Static resolution misses dynamic dispatch, rebinding decorators and calls through container attributes; the resolver reports these as unresolved rather than guessing, trading call-edge recall for interpretable precision. Gold symbols come from one reference patch; equally valid fixes can live elsewhere. The benchmark covers four Python repositories and 121 public tasks, and public-task results do not predict hidden-task results. We do not report an end-to-end resolution rate; the leaderboard measures that, and our claim is about the graph layer beneath it. Recomputing embeddings for the rebuilt nodes with a documented open model is straightforward future work.
+Static resolution misses dynamic dispatch, rebinding decorators and calls through container attributes; the resolver reports these as unresolved rather than guessing, trading call-edge recall for interpretable precision. Gold symbols come from one reference patch; equally valid fixes can live elsewhere. The benchmark covers four Python repositories and 121 public tasks, and public-task results do not predict hidden-task results. We do not report an end-to-end resolution rate; the leaderboard measures that, and our claim is about the graph layer beneath it. Embeddings for the rebuilt nodes from a documented open model are future work.
 
 ## 7. Conclusion
 
