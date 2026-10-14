@@ -30,11 +30,11 @@ shutil.copytree(ROOT / "results" / "rebuilt_graphs", DST / "rebuilt_graphs")
 for p in (ROOT / "results").glob("*.json*"):
     shutil.copy(p, DST / "results" / p.name)
 meta = {
-    "title": "SWE-GraphBench: corrected code graphs + localization benchmark (Gemma 4 Developer Agent)",
+    "title": "SWE-GraphBench: code graphs + localization bench",
     "id": f"{USER}/{SLUG}",
     "licenses": [{"name": "Apache 2.0"}],
     "keywords": ["software engineering", "code graph", "fault localization", "gemma", "benchmark"],
-    "subtitle": "Pure-stdlib graph builder, graphs for all 127 task commits, gold symbols for 129 tasks, audit + baseline results",
+    "subtitle": "Stdlib graph builder, 127 corrected graphs, gold symbols, audit and baselines",
 }
 (DST / "dataset-metadata.json").write_text(json.dumps(meta, indent=2))
 total = sum(p.stat().st_size for p in DST.rglob("*") if p.is_file())

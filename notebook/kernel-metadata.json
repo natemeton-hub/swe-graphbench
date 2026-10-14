@@ -1,0 +1,13 @@
+{
+  "id": "nateshingleton/swe-graphbench-reproduce",
+  "title": "SWE-GraphBench: reproduce the audit and benchmark",
+  "code_file": "swe-graphbench-reproduce.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "false",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": ["nateshingleton/swe-graphbench"],
+  "competition_sources": ["gemma-4-developer-agent"],
+  "kernel_sources": []
+}

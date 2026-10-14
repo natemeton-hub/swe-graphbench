@@ -13,3 +13,6 @@ __pycache__/
 # scratch
 file_listing.csv
 first_graph.txt
+
+results/kaggle_dataset/
+
