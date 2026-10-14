@@ -12,7 +12,7 @@ Local coding agents built on Gemma 4 navigate repositories through a 32k-token w
 
 The Gemma 4 Developer Agent competition asks for an agent that fixes real GitHub issues offline on a single accelerator, with a 32,768-token context, a per-task tool-call budget and a 4 GiB sandbox. Under these constraints the first and most expensive sub-problem is *localization*: finding the few functions an issue is about before the context fills with irrelevant file reads. Agentless and graph-guided agents such as LocAgent report that most end-to-end failures on SWE-bench are localization failures and that a code graph is the most effective structure for narrowing a repository to a few candidates.
 
-The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with `calls` edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools. The artifacts themselves have not been examined. Because the hidden test set uses private repositories, an agent cannot bring a precomputed graph: whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
+The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with `calls` edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools. The artifacts themselves have not been examined, and because the hidden test set uses private repositories, an agent cannot bring a precomputed graph: whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
 
 This paper treats the released artifacts as an object of study and then fixes what the audit finds. Our contributions are:
 
@@ -53,7 +53,7 @@ Everything is deterministic and runs on a laptop CPU with no language model in t
 
 ### 4.1 Gold symbols
 
-For every hunk of the reference `patch` in a modified Python file we take the old-file lines it removes (for pure insertions, the preceding context line), read the file at `base_commit`, and record the innermost enclosing `def` or `class` by `ast` line spans including decorators. Symbol ids use the released convention: dotted path from the repository root with a leading `src/` or `docs_src/` dropped, full nesting kept. Added files, non-Python files and module-level edits are kept as separate fields rather than dropped. 121 of 129 tasks have at least one gold symbol (median 1, max 141); 11 add new files; 21 touch module-level code. Gold symbols are necessary locations, not sufficient ones, but they are the deterministic proxy used by Agentless, LocAgent and GREPO.
+For every hunk of the reference `patch` in a modified Python file we take the old-file lines it removes (for pure insertions, the preceding context line), read the file at `base_commit`, and record the innermost enclosing `def` or `class` by `ast` line spans including decorators. Symbol ids use the released convention: dotted path from the repository root with a leading `src/` or `docs_src/` dropped, full nesting kept. Added files, non-Python files and module-level edits are kept as separate fields rather than dropped. 121 of 129 tasks have at least one gold symbol (median 1, max 141); 11 add new files; 21 touch module-level code. Gold symbols are necessary, not sufficient, locations, but they are the deterministic proxy used by Agentless, LocAgent and GREPO.
 
 ### 4.2 Builder
 
