@@ -61,25 +61,26 @@ def fig1():
 # ---------------- Figure 2: released vs rebuilt ----------------
 def fig2():
     s = json.loads((RES / "compare_graphs.json").read_text())
-    conds = [("released-notests", "released graph + embeddings", S1), ("rebuilt-notests-dir", "rebuilt graph (directed, no embeddings)", S2)]
-    methods = [("bm25_text", "BM25 (code text)"), ("symbol_seed", "symbol seed"), ("emb_expand", "embedding expand"), ("ppr", "PageRank"), ("hybrid", "hybrid (RRF)")]
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.6), sharey=True)
-    for ax, (metric, title) in zip(axes, [("hit@5", "Hit@5"), ("mrr", "MRR")]):
-        h = 0.36
+    conds = [("released", "released graph, as shipped", S1), ("released-notests", "released graph, tests filtered", S3), ("rebuilt-notests", "rebuilt graph, tests filtered", S2)]
+    methods = [("bm25_text", "BM25 (code text)"), ("symbol_seed", "symbol seed"), ("ppr", "PageRank"), ("hybrid", "hybrid (RRF)")]
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.0), sharey=True)
+    h = 0.24
+    for ax, (metric, title) in zip(axes, [("hit@5", "Hit@5"), ("recall@10", "Recall@10")]):
         for j, (cname, clabel, color) in enumerate(conds):
             for i, (m, _) in enumerate(methods):
                 v = s[cname]["methods"][m][metric]; mean, (lo, hi) = v["mean"], v["ci95"]
-                y = i + (j - 0.5) * (h + 0.04)
+                y = i + (j - 1) * (h + 0.03)
                 ax.barh(y, mean, height=h, color=color, linewidth=0, label=clabel if i == 0 else None, zorder=3)
-                ax.plot([lo, hi], [y, y], color=INK, linewidth=0.8, zorder=4)
-                ax.text(mean + 0.012, y, f"{mean:.2f}", va="center", fontsize=7.5, color=INK2)
+                ax.plot([lo, hi], [y, y], color=INK, linewidth=0.7, alpha=0.6, zorder=4)
+                ax.text(hi + 0.015, y, f"{mean:.2f}", va="center", fontsize=7, color=INK2)
         ax.set_yticks(range(len(methods))); ax.set_yticklabels([m[1] for m in methods]); ax.invert_yaxis()
-        ax.set_xlim(0, 0.85); ax.set_title(title, loc="left", fontsize=10, color=INK)
+        ax.set_xlim(0, 0.75); ax.set_title(title, loc="left", fontsize=10, color=INK)
         style(ax)
-    axes[0].legend(loc="lower right", frameon=False, fontsize=8)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=8, bbox_to_anchor=(0.5, -0.01))
     n = s["released-notests"]["n_tasks"]
-    fig.suptitle(f"Symbol localization on the same {n} tasks, bars = mean, ticks = 95% bootstrap CI", x=0.01, ha="left", fontsize=9, color=INK2)
-    fig.tight_layout(); fig.savefig(FIG / "fig2_compare.png", dpi=220); fig.savefig(FIG / "fig2_compare.svg")
+    fig.suptitle(f"Symbol localization on the same {n} FastAPI/httpx tasks. Bars: mean; ticks: 95% bootstrap CI.", x=0.01, ha="left", fontsize=9, color=INK2)
+    fig.tight_layout(rect=(0, 0.07, 1, 1)); fig.savefig(FIG / "fig2_compare.png", dpi=220); fig.savefig(FIG / "fig2_compare.svg")
     print("fig2 done")
 
 
@@ -95,13 +96,14 @@ def fig3():
         for i, (m, _) in enumerate(methods):
             v = c["methods"][m][metric]; y = i + (j - 1) * (h + 0.03)
             ax.barh(y, v["mean"], height=h, color=color, linewidth=0, label=label if i == 0 else None, zorder=3)
-            ax.plot(v["ci95"], [y, y], color=INK, linewidth=0.8, zorder=4)
-            ax.text(v["mean"] + 0.012, y, f"{v['mean']:.2f}", va="center", fontsize=7.5, color=INK2)
+            ax.plot(v["ci95"], [y, y], color=INK, linewidth=0.7, alpha=0.6, zorder=4)
+            ax.text(v["ci95"][1] + 0.015, y, f"{v['mean']:.2f}", va="center", fontsize=7, color=INK2)
     ax.set_yticks(range(len(methods))); ax.set_yticklabels([m[1] for m in methods]); ax.invert_yaxis()
-    ax.set_xlim(0, 0.85); ax.legend(loc="lower right", frameon=False, fontsize=8)
-    ax.set_title(f"rich + requests: {c['n_tasks']} tasks with no released graph, rebuilt graph only", loc="left", fontsize=9, color=INK2)
+    ax.set_xlim(0, 0.75)
+    fig.legend(loc="lower center", ncol=3, frameon=False, fontsize=8, bbox_to_anchor=(0.5, -0.01))
+    ax.set_title(f"rich + requests: {c['n_tasks']} tasks with no released graph, rebuilt graph, tests filtered", loc="left", fontsize=9, color=INK2)
     style(ax)
-    fig.tight_layout(); fig.savefig(FIG / "fig3_unlocked.png", dpi=220); fig.savefig(FIG / "fig3_unlocked.svg")
+    fig.tight_layout(rect=(0, 0.09, 1, 1)); fig.savefig(FIG / "fig3_unlocked.png", dpi=220); fig.savefig(FIG / "fig3_unlocked.svg")
     print("fig3 done")
 
 

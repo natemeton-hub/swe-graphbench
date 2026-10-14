@@ -16,6 +16,8 @@ REPO_DIR = {"fastapi/fastapi": "fastapi", "Textualize/rich": "rich", "psf/reques
 
 tasks = [json.loads(l) for l in (DATA / "tasks.jsonl").open(encoding="utf-8") if l.strip()]
 pairs = sorted({(REPO_DIR[t["repo"]], t["base_commit"]) for t in tasks})
+if "--reverse" in sys.argv:  # allows a second worker to meet the first in the middle
+    pairs = pairs[::-1]
 print("commits to build:", len(pairs))
 stats = []
 for repo, sha in pairs:

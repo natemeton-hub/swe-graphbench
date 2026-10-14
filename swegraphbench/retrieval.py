@@ -80,8 +80,12 @@ class GraphIndex:
                 continue
             s, t = e["source"], e["target"]
             if s != t and s in keep and t in keep:
-                self.adj[s].add(t)
-                if not directed:
+                if directed == "reverse":      # propagate from callee to its callers
+                    self.adj[t].add(s)
+                elif directed:                 # caller -> callee
+                    self.adj[s].add(t)
+                else:                          # undirected
+                    self.adj[s].add(t)
                     self.adj[t].add(s)
         self._bm25_text = BM25Okapi([tokenize(self.text[n]) + tokenize(n) for n in self.nodes])
         self._bm25_name = BM25Okapi([tokenize(n) for n in self.nodes])
@@ -107,7 +111,12 @@ class GraphIndex:
         return [self.nodes[i] for i in idx if scores[i] > 0]
 
     def bm25_text(self, problem: str, k: int = 50) -> list[str]:
-        return self._rank_scores(self._bm25_text.get_scores(tokenize(problem)), k)
+        cache = getattr(self, "_bm25_cache", None)
+        if cache is None:
+            cache = self._bm25_cache = {}
+        if problem not in cache:
+            cache[problem] = self._bm25_text.get_scores(tokenize(problem))
+        return self._rank_scores(cache[problem], k)
 
     def bm25_name(self, problem: str, k: int = 50) -> list[str]:
         return self._rank_scores(self._bm25_name.get_scores(tokenize(problem)), k)
@@ -145,6 +154,20 @@ class GraphIndex:
                 break
         return out
 
+    def _transition(self):
+        """Column-stochastic sparse transition matrix T[m, n] = 1/outdeg(n) for edge n->m (cached)."""
+        if getattr(self, "_T", None) is None:
+            from scipy.sparse import csr_matrix
+            rows, cols, vals = [], [], []
+            for n, nb in self.adj.items():
+                if nb:
+                    share = 1.0 / len(nb)
+                    for m in nb:
+                        rows.append(self.pos[m]); cols.append(self.pos[n]); vals.append(share)
+            N = len(self.nodes)
+            self._T = csr_matrix((vals, (rows, cols)), shape=(N, N))
+        return self._T
+
     def ppr(self, problem: str, k: int = 50, seeds: int = 10, alpha: float = 0.15, iters: int = 30) -> list[str]:
         seed = self.bm25_text(problem, seeds)
         if not seed:
@@ -154,15 +177,10 @@ class GraphIndex:
             p0[self.pos[s]] = 1.0
         p0 /= p0.sum()
         p = p0.copy()
+        T = self._transition()
         for _ in range(iters):
-            nxt = np.zeros_like(p)
-            for n, nb in self.adj.items():
-                if nb and p[self.pos[n]] > 0:
-                    share = p[self.pos[n]] / len(nb)
-                    for m in nb:
-                        nxt[self.pos[m]] += share
-            # isolated / dangling mass returns to seeds
-            lost = 1.0 - nxt.sum()
+            nxt = T @ p
+            lost = 1.0 - nxt.sum()  # mass at dangling (out-degree 0) nodes returns to the seeds
             p = (1 - alpha) * nxt + (alpha + (1 - alpha) * lost) * p0
         return self._rank_scores(p, k)
 

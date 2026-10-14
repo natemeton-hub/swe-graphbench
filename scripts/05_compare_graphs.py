@@ -93,6 +93,7 @@ conditions = {
     "rebuilt":             dict(task_ids=with_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=False, directed=False),
     "rebuilt-notests":     dict(task_ids=with_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=True,  directed=False),
     "rebuilt-notests-dir": dict(task_ids=with_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=True,  directed=True),
+    "rebuilt-notests-rev": dict(task_ids=with_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=True,  directed="reverse"),
     "rebuilt-relemb-notests": dict(task_ids=with_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=True, exclude_tests=True, directed=False),
     "rebuilt-notests-ALL": dict(task_ids=with_gold, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=True, directed=False),
     "rebuilt-notests-NOREL": dict(task_ids=no_rel, graph_for=lambda k: reb_graphs.get(k), use_emb=False, exclude_tests=True, directed=False),

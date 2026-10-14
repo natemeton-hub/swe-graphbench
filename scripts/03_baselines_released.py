@@ -17,7 +17,7 @@ from swegraphbench.retrieval import GraphIndex, recall_at, hit_at, mrr  # noqa
 
 DATA, OUT = ROOT / "data", ROOT / "results"
 REPO_SHORT = {"fastapi/fastapi": "fastapi", "Textualize/rich": "rich", "psf/requests": "requests", "encode/httpx": "httpx"}
-KS = (1, 5, 10, 20, 50)
+KS = (1, 5, 10, 20)  # ranked lists are length max(KS); keep identical to 05_compare_graphs.py so RRF fuses the same depth
 METHODS = ["bm25_name", "bm25_text", "symbol_seed", "emb_expand", "ppr", "hybrid"]
 
 tasks = {json.loads(l)["instance_id"]: json.loads(l) for l in (DATA / "tasks.jsonl").open(encoding="utf-8") if l.strip()}

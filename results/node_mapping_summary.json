@@ -1,0 +1,18 @@
+{
+  "n_graphs": 68,
+  "rebuilt_defs": 341563,
+  "released_nodes": 266565,
+  "exact_match": 256242,
+  "async_defs": 70070,
+  "async_missing": 69845,
+  "nested_hoisted": 8034,
+  "hoist_collisions": 2095,
+  "unexplained_released": 2289,
+  "released_und_pairs": 81967,
+  "released_pairs_confirmed": 53793,
+  "rebuilt_call_edges": 142657,
+  "released_recip_frac_min": 1.0,
+  "rebuilt_recip_frac_max": 0.013605442176870748,
+  "frac_defs_missing_from_released": 0.24979579169874955,
+  "frac_async_missing": 0.9967889253603539
+}
