@@ -2,8 +2,6 @@
 
 ## A dependency-free graph builder, corrected graphs for every public task, and a symbol-level localization benchmark for the Gemma 4 Developer Agent release
 
-<!-- Numbers in [[double brackets]] are filled from results/ once the full rebuild finishes. -->
-
 ## Abstract
 
 Local coding agents built on Gemma 4 navigate repositories through a 32k-token window and a bounded tool budget, so the code-intelligence tools the competition harness exposes are the only repository-level navigation an agent has. We audit the graphs and embeddings behind those tools and find them structurally weaker than their interface suggests: graphs exist for only 68 of the 129 public tasks; in every graph 100% of `calls` edges are reciprocal, so caller/callee direction is lost; a median 68% of nodes have no edge; a median 9% of nodes are library code against 64% test code; 99.7% of `async def` definitions are missing and nested functions are hoisted into colliding identifiers; and no node carries a file path or line number. We release SWE-GraphBench: (1) the audit as reproducible scripts, (2) a ~300-line pure-standard-library graph builder that emits the competition schema with directed call edges, async and nested definitions, location attributes and `contains`/`imports`/`inherits` edges, fast enough to run inside the air-gapped sandbox, (3) corrected graphs for all 127 task commits, including the 59 rich and requests commits that have no released graph, and (4) a benchmark of 121 tasks with patch-derived gold symbols and LLM-free localization baselines reported as Recall@k, Hit@k and MRR with paired bootstrap statistics and an explicit coverage ceiling. On the 65 tasks where both graphs exist, moving from the graph as shipped to the rebuilt graph with test nodes filtered raises the best retriever's Hit@5 from 0.34 to 0.49 and Recall@10 from 0.27 to 0.40, and the rebuilt graphs make graph-based localization possible on the 56 tasks that previously had none. Code, graphs and results are released under Apache-2.0.
@@ -16,8 +14,8 @@ The organizers released such a structure: per task commit, a NetworkX node-link 
 
 This paper treats the released artifacts as an object of study and then fixes what the audit finds. Our contributions are:
 
-- **An audit** (Section 3) of all 68 released graphs and 127 embedding archives, every statistic produced by a script: availability, edge direction, isolation, library-versus-test composition, missing `async` and nested definitions, hoisting collisions, embedding duplication, and coverage of the symbols reference patches edit.
-- **A builder** (Section 4.2) that emits the same JSON schema from source with nothing but Python's `ast` module: every definition including `async` and nested ones, directed call edges annotated with their resolution rule, containment, import and inheritance edges, and file and line attributes. It runs in about 20 s on FastAPI's 1,120 files, so an agent can run it as a skill script on an unseen repository.
+- **An audit** (Section 3) of all 68 released graphs and 127 embedding archives, every statistic produced by a script: availability, edge direction, isolation, composition, missing `async` and nested definitions, hoisting collisions, embedding duplication, and coverage of the symbols reference patches edit.
+- **A builder** (Section 4.2) that emits the same JSON schema from source with nothing but Python's `ast` module: every definition including `async` and nested ones, directed call edges annotated with their resolution rule, containment, import and inheritance edges, and file and line attributes. It runs in about 20 s on FastAPI, so an agent can run it as a skill script on an unseen repository.
 - **Corrected graphs** for all 127 (repository, commit) pairs, released as a Kaggle dataset, including the 59 rich and requests commits for which no graph exists and the harness therefore exposes no code-intelligence tools.
 - **A benchmark** (Section 4) of 121 tasks with patch-derived gold symbols and a protocol that reports the coverage ceiling next to every retrieval number, so "the graph cannot represent the answer" is never confused with "the retriever missed it".
 - **Findings** (Section 5) on released versus rebuilt graphs under identical methods, and on what test filtering, edge direction and the released embeddings each contribute.
@@ -38,7 +36,10 @@ Everything is deterministic and runs on a laptop CPU. We keep language models ou
 
 **Availability.** Graphs exist for the 67 FastAPI commits and the single httpx commit only. The 61 rich and requests tasks have embeddings but no graph, and because the harness enables the tools only when both files exist, agents on those tasks receive no code-intelligence tool.
 
-**Structure (Figure 1).** Every graph has a single edge type, `calls`. In all 68 graphs, 100% of edge pairs are reciprocal: for every `A calls B` there is a `B calls A`, so `get_code_neighbors` cannot distinguish callers from callees. A median 68% of nodes are isolated (3% for httpx to 72%). A median 64% of nodes are test functions and only 9% belong to the library package. The highest-degree node in every FastAPI graph is the `FastAPI` class with degree 123, suggesting calls resolved by name matching rather than scope.
+**Structure (Figure 1).** Every graph has a single edge type, `calls`. In all 68 graphs, 100% of edge pairs are reciprocal: for every `A calls B` there is a `B calls A`, so `get_code_neighbors` cannot distinguish callers from callees. A median 68% of nodes are isolated (3% for httpx to 72%), a median 64% are test functions and only 9% belong to the library package. The highest-degree node in every FastAPI graph is the `FastAPI` class (degree 123), suggesting calls resolved by name matching rather than scope.
+
+![Figure 1](figures/fig1_audit.png)
+*Figure 1. Four structural measures of each released graph (one dot per graph, n = 68) with medians.*
 
 **Node attributes and identifiers.** Nodes carry only `id`, `name` and `text`: no file path, line number, kind or parent, so an agent that finds a symbol still needs a grep to open it. Comparing node sets against an `ast` walk of the same commit (Section 4.2) shows three systematic omissions: (i) `async def` is not a node: 69,845 of 70,070 async definitions across the 68 commits (99.7%) are absent, including FastAPI's `solve_dependencies`, `serialize_response` and the request-handler closure `app`; (ii) nested synchronous functions are hoisted to their enclosing class or module (8,034 released ids), so distinct closures share one identifier (`fastapi.applications.FastAPI.decorator` stands for two different inner functions) and 2,095 released ids are ambiguous; (iii) 2,289 released ids (0.9%) have no counterpart at all. Overall 25.0% of the 341,563 definitions present at those commits have no released node.
 
@@ -60,10 +61,10 @@ The builder has no dependency outside the standard library, is about 300 lines, 
 
 ### 4.3 Baselines and metrics
 
-All baselines take only the problem statement and the graph (plus embeddings when available) and return a ranked list of node ids:
+All baselines take the problem statement and the graph (plus embeddings when available) and return a ranked list of node ids:
 
 - **BM25 (name / text)** over identifier-split tokens of the dotted name or of the source text.
-- **Symbol seed**: identifiers mentioned in the issue (back-ticked spans, dotted paths, snake_case and CamelCase tokens) resolved to nodes with the same four-tier rule as the harness (`exact`, suffix, case-insensitive, substring), ranked by weighted mention count. This is the strongest query the released `search_similar_code` can express.
+- **Symbol seed**: identifiers mentioned in the issue (back-ticked spans, dotted paths, snake_case and CamelCase tokens) resolved to nodes with the harness's four-tier rule (exact, suffix, case-insensitive, substring), ranked by weighted mention count: the strongest query the released `search_similar_code` can express.
 - **Embedding expansion**: the mean released vector of the top seeds, expanded by cosine similarity.
 - **Personalized PageRank** from the top-10 BM25 seeds over `calls` edges, undirected or directed.
 - **Hybrid**: reciprocal-rank fusion of BM25-text, embedding expansion and PageRank.
@@ -74,7 +75,7 @@ Each condition may drop test nodes from the candidate set, a filter any library-
 
 ### 5.1 Released versus rebuilt graphs
 
-All conditions use the 65 FastAPI and httpx tasks that have both a released graph and a gold symbol, except Section 5.3. Table 1 gives means, Figure 2 adds confidence intervals, and `results/paired_stats.json` holds paired bootstrap intervals and sign tests for every contrast.
+All conditions use the 65 FastAPI and httpx tasks that have both a released graph and a gold symbol, except Section 5.2. Table 1 gives means, Figure 2 adds confidence intervals, and `results/paired_stats.json` holds paired bootstrap intervals and sign tests for every contrast.
 
 **Table 1.** Hit@5 / Recall@10 / MRR on the same 65 tasks. "Cov." is the coverage ceiling (share of gold symbols that are nodes).
 
@@ -88,6 +89,9 @@ All conditions use the 65 FastAPI and httpx tasks that have both a released grap
 | rebuilt, PPR to callers | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .338 / .345 / .261 | .385 / .374 / .292 |
 | rebuilt + released emb. | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | .200 / .122 / .179 | .431 / .337 / .266 | .477 / .403 / .294 |
 
+![Figure 2](figures/fig2_compare.png)
+*Figure 2. Hit@5 and Recall@10 on the same 65 tasks for the released graph as shipped, the released graph with test nodes filtered, and the rebuilt graph with test nodes filtered. Ticks are 95% bootstrap intervals.*
+
 **Filtering tests is the single largest cheap win.** Removing test nodes from the candidate set raises BM25 Hit@5 on the released graph from 0.292 to 0.415 (paired 95% CI +0.03 to +0.22, sign test p = 0.02) and Recall@10 from 0.253 to 0.321 (p = 0.006). An agent fixing library code can apply this filter for free; the released graph's 64% test share makes it necessary.
 
 **The rebuilt graph helps on top of that, modestly.** With tests filtered in both, the rebuilt graph lifts the hybrid retriever from 0.431 to 0.492 Hit@5 and 0.350 to 0.403 Recall@10 (paired CI −0.01 to +0.12, 15 wins / 5 losses, p = 0.04) and PageRank MRR from 0.201 to 0.266. At 65 tasks these gains are not individually significant for every metric, and we report them as such. They come from two sources the audit predicted: the coverage ceiling rises from 0.854 to 1.0 because async and nested gold symbols now exist, and scope-resolved call edges give PageRank a cleaner neighbourhood. End to end, from the graph as shipped to the rebuilt filtered graph, the hybrid retriever gains +0.154 Hit@5 (CI +0.05 to +0.26, p = 0.02) and +0.134 Recall@10 (CI +0.07 to +0.21, p < 0.001).
@@ -96,9 +100,12 @@ All conditions use the 65 FastAPI and httpx tasks that have both a released grap
 
 **The released embeddings add nothing measurable.** Because its query must itself be a resolved symbol, embedding expansion returns nothing on the 26 of 65 tasks whose issue names no resolvable symbol, has the same top-5 as symbol seeding on 45 tasks, and where it differs gains only +0.015 Recall@10. Adding the released vectors to the rebuilt graph leaves every metric unchanged or marginally lower.
 
-### 5.3 Tasks the release left uncovered (56 rich and requests tasks)
+### 5.2 Tasks the release left uncovered (56 rich and requests tasks)
 
 On the 56 rich and requests tasks with gold symbols and no released graph, the rebuilt graph with tests filtered reaches Hit@5 0.500, Recall@10 0.478 and MRR 0.358 with the hybrid retriever (Figure 3), on par with the FastAPI tasks; over all 121 tasks the same configuration scores 0.496 / 0.438 / 0.326. Under the released artifacts an agent on these tasks has no graph tool at all.
+
+![Figure 3](figures/fig3_unlocked.png)
+*Figure 3. Localization on the 56 rich and requests tasks using only the rebuilt graph.*
 
 ## 6. Limitations
 
