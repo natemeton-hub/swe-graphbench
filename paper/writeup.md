@@ -12,7 +12,7 @@ Local coding agents built on Gemma 4 navigate repositories through a 32k-token w
 
 The Gemma 4 Developer Agent competition asks for an agent that fixes real GitHub issues offline on a single accelerator, with a 32,768-token context, a per-task tool-call budget and a 4 GiB sandbox. Under these constraints the first and most expensive sub-problem is *localization*: finding the handful of functions an issue is about before the context fills with irrelevant file reads. Agentless and graph-guided agents such as LocAgent report that most end-to-end failures on SWE-bench are localization failures and that a code graph is the most effective structure for narrowing a repository to a few candidates.
 
-The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with `calls` edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools, and submissions using them are "highly encouraged". The artifacts themselves have not been examined. Because the hidden test set uses private repositories, an agent cannot bring a precomputed graph: whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
+The organizers released such a structure: per task commit, a NetworkX node-link JSON graph of symbols with `calls` edges and a 256-dimensional embedding per symbol, exposed through three sandboxed tools. The artifacts themselves have not been examined. Because the hidden test set uses private repositories, an agent cannot bring a precomputed graph: whatever graph exists at evaluation time is the organizers' or one the agent builds inside the sandbox.
 
 This paper treats the released artifacts as an object of study and then fixes what the audit finds. Our contributions are:
 
@@ -22,7 +22,7 @@ This paper treats the released artifacts as an object of study and then fixes wh
 - **A benchmark** (Section 4) of 121 tasks with patch-derived gold symbols and a protocol that reports the coverage ceiling next to every retrieval number, so "the graph cannot represent the answer" is never confused with "the retriever missed it".
 - **Findings** (Section 5) on released versus rebuilt graphs under identical methods, and on what test filtering, edge direction and the released embeddings each contribute.
 
-Everything is deterministic and runs on a laptop CPU. We keep language models out of the loop deliberately: the question is what the *graph* supports, and an LLM in the loop would confound graph quality with prompt quality.
+Everything is deterministic and runs on a laptop CPU. We keep language models out of the loop deliberately: the question is what the *graph* supports, and an LLM would confound graph quality with prompt quality.
 
 ## 2. Related work
 
@@ -36,7 +36,7 @@ Everything is deterministic and runs on a laptop CPU. We keep language models ou
 
 *Setup.* The public release contains `tasks.jsonl` (129 tasks: 67 `fastapi/fastapi`, 48 `Textualize/rich`, 13 `psf/requests`, 1 `encode/httpx`), 68 graph files and 127 embedding files keyed by `<repo>_<sha>`. We cloned the four repositories and verified that every base commit resolves. All numbers come from `scripts/02_audit_coverage.py` and `scripts/06_node_mapping_audit.py`.
 
-**Availability.** Graphs exist for the 67 FastAPI commits and the single httpx commit only. The 61 rich and requests tasks have embeddings but no graph, and because the harness enables the code-intelligence tools only when both files exist, agents on those tasks receive none of the three tools.
+**Availability.** Graphs exist for the 67 FastAPI commits and the single httpx commit only. The 61 rich and requests tasks have embeddings but no graph, and because the harness enables the tools only when both files exist, agents on those tasks receive no code-intelligence tool.
 
 **Structure (Figure 1).** Every graph has a single edge type, `calls`. In all 68 graphs, 100% of edge pairs are reciprocal: for every `A calls B` there is a `B calls A`, so `get_code_neighbors` cannot distinguish callers from callees. A median 68% of nodes are isolated (3% for httpx to 72%). A median 64% of nodes are test functions and only 9% belong to the library package. The highest-degree node in every FastAPI graph is the `FastAPI` class with degree 123, suggesting calls resolved by name matching rather than scope.
 
@@ -68,7 +68,7 @@ All baselines take only the problem statement and the graph (plus embeddings whe
 - **Personalized PageRank** from the top-10 BM25 seeds over `calls` edges, undirected or directed.
 - **Hybrid**: reciprocal-rank fusion of BM25-text, embedding expansion and PageRank.
 
-Each condition may drop test nodes from the candidate set (`exclude_tests`), a filter any library-fixing agent can apply for free. We report Recall@k and Hit@k for k in {1, 5, 10, 20} and MRR, averaged over tasks with 95% bootstrap confidence intervals (2,000 resamples), always alongside the coverage ceiling, the Recall the best possible ranking could reach given which gold symbols are nodes.
+Each condition may drop test nodes from the candidate set, a filter any library-fixing agent can apply for free. We report Recall@k and Hit@k for k in {1, 5, 10, 20} and MRR, averaged over tasks with 95% bootstrap confidence intervals (2,000 resamples), always alongside the coverage ceiling: the Recall a perfect ranking could reach given which gold symbols are nodes.
 
 ## 5. Experiments
 
@@ -83,21 +83,22 @@ All conditions use the 65 FastAPI and httpx tasks that have both a released grap
 | released | kept | 0.854 | .292 / .253 / .189 | .215 / .122 / .172 | .215 / .141 / .179 | .354 / .275 / .167 | .338 / .269 / .238 |
 | released | filtered | 0.854 | .415 / .321 / .280 | .231 / .137 / .182 | .231 / .152 / .190 | .369 / .312 / .201 | .431 / .350 / .295 |
 | rebuilt | kept | 1.000 | .308 / .287 / .212 | .215 / .133 / .181 | n/a | .369 / .282 / .214 | .415 / .332 / .284 |
-| rebuilt | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .431 / .337 / .266 | **.492 / .403 / .302** |
-| rebuilt, directed PPR | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .369 / .341 / .249 | .446 / .394 / .314 |
-| rebuilt + released emb. | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | .200 / .122 / .179 | .431 / .337 / .266 | .477 / .403 / .297 |
+| rebuilt | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .431 / .337 / .266 | **.492 / .403 / .299** |
+| rebuilt, PPR to callees | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .369 / .341 / .249 | .446 / .394 / .314 |
+| rebuilt, PPR to callers | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | n/a | .338 / .345 / .261 | .385 / .374 / .292 |
+| rebuilt + released emb. | filtered | 1.000 | .431 / .358 / .264 | .215 / .133 / .182 | .200 / .122 / .179 | .431 / .337 / .266 | .477 / .403 / .294 |
 
 **Filtering tests is the single largest cheap win.** Removing test nodes from the candidate set raises BM25 Hit@5 on the released graph from 0.292 to 0.415 (paired 95% CI +0.03 to +0.22, sign test p = 0.02) and Recall@10 from 0.253 to 0.321 (p = 0.006). An agent fixing library code can apply this filter for free; the released graph's 64% test share makes it necessary.
 
 **The rebuilt graph helps on top of that, modestly.** With tests filtered in both, the rebuilt graph lifts the hybrid retriever from 0.431 to 0.492 Hit@5 and 0.350 to 0.403 Recall@10 (paired CI −0.01 to +0.12, 15 wins / 5 losses, p = 0.04) and PageRank MRR from 0.201 to 0.266. At 65 tasks these gains are not individually significant for every metric, and we report them as such. They come from two sources the audit predicted: the coverage ceiling rises from 0.854 to 1.0 because async and nested gold symbols now exist, and scope-resolved call edges give PageRank a cleaner neighbourhood. End to end, from the graph as shipped to the rebuilt filtered graph, the hybrid retriever gains +0.154 Hit@5 (CI +0.05 to +0.26, p = 0.02) and +0.134 Recall@10 (CI +0.07 to +0.21, p < 0.001).
 
-**Edge direction does not help here.** Propagating from BM25 seeds toward callees only (directed PageRank) is slightly worse than undirected propagation (Hit@5 0.369 vs 0.431), while the hybrid's MRR is unchanged within noise. Gold symbols are as often callers of a mentioned symbol as callees, so for seed expansion the direction is best kept available but not enforced; it remains essential for the tool semantics (`get_code_neighbors` can finally answer "who calls this").
+**Edge direction does not help seed expansion.** Propagating from BM25 seeds toward callees only is worse than undirected propagation (PageRank Hit@5 0.369 vs 0.431), and toward callers only is worse still (0.338). Gold symbols are as often callers of a mentioned symbol as callees, so for expansion direction is best kept available but not enforced; it remains essential for tool semantics, since `get_code_neighbors` can finally answer "who calls this".
 
 **The released embeddings add nothing measurable.** Because its query must itself be a resolved symbol, embedding expansion returns nothing on the 26 of 65 tasks whose issue names no resolvable symbol, has the same top-5 as symbol seeding on 45 tasks, and where it differs gains only +0.015 Recall@10. Adding the released vectors to the rebuilt graph leaves every metric unchanged or marginally lower.
 
 ### 5.3 Tasks the release left uncovered (56 rich and requests tasks)
 
-On the 56 rich and requests tasks that have gold symbols and no released graph, the rebuilt graph with tests filtered reaches Hit@5 0.500, Recall@10 0.478 and MRR 0.358 with the hybrid retriever (Figure 3), on par with the FastAPI tasks. Over all 121 tasks with gold symbols the same configuration scores 0.496 / 0.438 / 0.328. These are the first graph-based localization numbers for these tasks; under the released artifacts an agent on them has no graph tool at all.
+On the 56 rich and requests tasks with gold symbols and no released graph, the rebuilt graph with tests filtered reaches Hit@5 0.500, Recall@10 0.478 and MRR 0.358 with the hybrid retriever (Figure 3), on par with the FastAPI tasks; over all 121 tasks the same configuration scores 0.496 / 0.438 / 0.326. Under the released artifacts an agent on these tasks has no graph tool at all.
 
 ## 6. Limitations
 

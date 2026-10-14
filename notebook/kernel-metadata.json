@@ -1,5 +1,5 @@
 {
-  "id": "nateshingleton/swe-graphbench-reproduce",
+  "id": "nateshingleton/swe-graphbench-reproduce-the-audit-and-benchmark",
   "title": "SWE-GraphBench: reproduce the audit and benchmark",
   "code_file": "swe-graphbench-reproduce.ipynb",
   "language": "python",
