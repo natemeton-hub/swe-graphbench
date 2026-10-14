@@ -1,0 +1,8 @@
+# The graph builder (swegraphbench/build_graph.py) has NO third-party dependencies.
+# The benchmark / audit scripts need:
+numpy>=1.26
+rank_bm25>=0.2.2
+unidiff>=0.7.5
+matplotlib>=3.8
+# optional, to download the competition data
+kaggle>=1.6

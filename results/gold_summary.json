@@ -1,0 +1,43 @@
+{
+  "aggregate": {
+    "tasks": 129,
+    "with_new_files": 11,
+    "only_new_files": 1,
+    "n_symbols_total": 529,
+    "n_py_files_total": 229,
+    "with_symbols": 121,
+    "with_module_level": 21
+  },
+  "per_repo": {
+    "fastapi/fastapi": {
+      "tasks": 67,
+      "with_new_files": 10,
+      "only_new_files": 1,
+      "with_symbols": 64
+    },
+    "psf/requests": {
+      "tasks": 13,
+      "with_symbols": 11
+    },
+    "Textualize/rich": {
+      "tasks": 48,
+      "with_symbols": 45,
+      "with_new_files": 1
+    },
+    "encode/httpx": {
+      "tasks": 1,
+      "with_symbols": 1
+    }
+  },
+  "symbols_per_task_with_symbols": {
+    "min": 1,
+    "median": 1,
+    "max": 141
+  },
+  "py_files_per_task": {
+    "min": 1,
+    "median": 1,
+    "max": 20
+  },
+  "missing_commits": []
+}

@@ -1,0 +1,15 @@
+# competition data (download with kaggle CLI; see README)
+data/
+# cloned upstream repositories and materialised commits
+repos/
+worktrees/
+# large generated artifacts (published separately as a Kaggle dataset)
+results/rebuilt_graphs/
+results/rebuilt_*.json
+# python
+__pycache__/
+*.pyc
+.venv/
+# scratch
+file_listing.csv
+first_graph.txt

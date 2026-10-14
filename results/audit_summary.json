@@ -1,0 +1,135 @@
+{
+  "n_graph_files": 68,
+  "n_emb_files": 127,
+  "graph_files_by_repo": {
+    "fastapi": 67,
+    "httpx": 1
+  },
+  "emb_files_by_repo": {
+    "fastapi": 67,
+    "httpx": 1,
+    "requests": 12,
+    "rich": 47
+  },
+  "graph_stats": {
+    "n_nodes": {
+      "min": 740,
+      "median": 3884.0,
+      "max": 4597
+    },
+    "n_edges": {
+      "min": 1618,
+      "median": 2469.0,
+      "max": 2780
+    },
+    "reciprocal_pair_frac": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "isolated_frac": {
+      "min": 0.02837837837837838,
+      "median": 0.6821105981368158,
+      "max": 0.7205666829506595
+    },
+    "lib_node_frac": {
+      "min": 0.07332722273143905,
+      "median": 0.0926497838171711,
+      "max": 0.48243243243243245
+    },
+    "test_node_frac": {
+      "min": 0.1945945945945946,
+      "median": 0.6354601513290185,
+      "max": 0.7794333170493405
+    },
+    "self_loop_pairs": {
+      "min": 0,
+      "median": 19.5,
+      "max": 20
+    },
+    "emb_minus_nodes": {
+      "min": 0,
+      "median": 0.0,
+      "max": 0
+    },
+    "nodes_minus_emb": {
+      "min": 0,
+      "median": 0.0,
+      "max": 0
+    },
+    "emb_dim": {
+      "min": 256,
+      "median": 256.0,
+      "max": 256
+    }
+  },
+  "edge_types_union": [
+    "calls"
+  ],
+  "node_attrs": [
+    "id",
+    "name",
+    "text"
+  ],
+  "any_location_attr": false,
+  "coverage": {
+    "tasks": 129,
+    "tasks_with_graph": 68,
+    "tasks_with_emb": 129,
+    "tasks_with_gold": 121,
+    "tasks_with_graph_and_gold": 65,
+    "tasks_all_gold_covered": 45,
+    "tasks_any_gold_covered": 61,
+    "gold_syms": 400,
+    "gold_syms_in_graph": 341,
+    "gold_syms_with_edges": 315,
+    "gold_syms_emb_checked": 529,
+    "gold_syms_in_emb": 465,
+    "gold_symbol_coverage_frac": 0.8525,
+    "gold_symbol_with_edges_frac": 0.7875,
+    "gold_symbol_emb_coverage_frac": 0.8790170132325141
+  },
+  "coverage_per_repo": {
+    "fastapi": {
+      "tasks": 67,
+      "tasks_with_graph": 67,
+      "tasks_with_emb": 67,
+      "tasks_with_gold": 64,
+      "tasks_with_graph_and_gold": 64,
+      "tasks_all_gold_covered": 45,
+      "tasks_any_gold_covered": 60,
+      "gold_syms": 384,
+      "gold_syms_in_graph": 330,
+      "gold_syms_with_edges": 304,
+      "gold_syms_emb_checked": 384,
+      "gold_syms_in_emb": 330
+    },
+    "requests": {
+      "tasks": 13,
+      "tasks_with_emb": 13,
+      "tasks_with_gold": 11,
+      "gold_syms_emb_checked": 13,
+      "gold_syms_in_emb": 13
+    },
+    "rich": {
+      "tasks": 48,
+      "tasks_with_emb": 48,
+      "tasks_with_gold": 45,
+      "gold_syms_emb_checked": 116,
+      "gold_syms_in_emb": 111
+    },
+    "httpx": {
+      "tasks": 1,
+      "tasks_with_graph": 1,
+      "tasks_with_emb": 1,
+      "tasks_with_gold": 1,
+      "tasks_with_graph_and_gold": 1,
+      "tasks_any_gold_covered": 1,
+      "gold_syms": 16,
+      "gold_syms_in_graph": 11,
+      "gold_syms_with_edges": 11,
+      "gold_syms_emb_checked": 16,
+      "gold_syms_in_emb": 11
+    }
+  }
+}
