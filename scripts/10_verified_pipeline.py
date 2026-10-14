@@ -30,11 +30,14 @@ repo_dir = lambda repo: ROOT / "repos" / repo.split("/")[1]
 short = lambda repo: repo.split("/")[1]
 
 
-def shard(items):
+def shard(items, key=lambda x: x):
+    """Stable partition by hash of the item key, so concurrently started workers never overlap
+    even if they skip different already-finished items."""
+    import zlib
     for a in sys.argv[2:]:
         if a.startswith("--shard"):
             k, m = map(int, sys.argv[sys.argv.index(a) + 1].split("/")) if a == "--shard" else map(int, a.split("=")[1].split("/"))
-            return [x for i, x in enumerate(items) if i % m == k]
+            return [x for x in items if zlib.crc32(str(key(x)).encode()) % m == k]
     return items
 
 
@@ -78,7 +81,7 @@ def stage_bench():
     per = OUT / "bench_per_task.jsonl"
     if per.exists():
         done = {json.loads(l)["instance_id"] for l in per.open(encoding="utf-8")}
-    todo = shard([t for t in tasks if gold[t["instance_id"]]["symbols"] and t["instance_id"] not in done])
+    todo = shard([t for t in tasks if gold[t["instance_id"]]["symbols"] and t["instance_id"] not in done], key=lambda t: t["instance_id"])
     with per.open("a", encoding="utf-8") as f:
         for t in todo:
             gp = GRAPHS / f"{short(t['repo'])}_{t['base_commit']}.json.gz"
@@ -117,7 +120,7 @@ def summarize(rows):
 
 
 def stage_summary():
-    rows = [json.loads(l) for l in (OUT / "bench_per_task.jsonl").open(encoding="utf-8")]
+    rows = list({r["instance_id"]: r for r in (json.loads(l) for l in (OUT / "bench_per_task.jsonl").open(encoding="utf-8"))}.values())
     gold = [json.loads(l) for l in (OUT / "gold.jsonl").open(encoding="utf-8")]
     builds = [json.loads(l) for l in (OUT / "build_stats.jsonl").open(encoding="utf-8")] if (OUT / "build_stats.jsonl").exists() else []
     out = {"overall": summarize(rows), "per_repo": {}, "per_difficulty": {},

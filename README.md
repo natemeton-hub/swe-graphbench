@@ -13,6 +13,19 @@ The resource has four parts:
 | Corrected graphs | One graph per (repo, base_commit) for all 127 commits in `tasks.jsonl`, including the 59 commits that have no released graph | `scripts/04_rebuild_all.py` -> Kaggle dataset |
 | Benchmark | Gold symbol sets for 121 tasks (innermost def/class touched by the reference patch) and LLM-free localization baselines (BM25, symbol-seed, embedding expansion, personalized PageRank, RRF hybrid) with Recall@k / Hit@k / MRR and bootstrap CIs | `swegraphbench/gold.py`, `swegraphbench/retrieval.py`, `scripts/03_*.py`, `scripts/05_*.py` |
 
+## Published artifacts
+
+| Artifact | Link |
+| --- | --- |
+| Main dataset: builder, 127 corrected graphs, gold symbols, Qwen3-Embedding-0.6B archives, all results | https://www.kaggle.com/datasets/nateshingleton/swe-graphbench |
+| SWE-GraphBench-Verified: 499 graphs + gold symbols for all 500 SWE-bench Verified tasks | https://www.kaggle.com/datasets/nateshingleton/swe-graphbench-verified |
+| Reproduction notebook (CPU): audit, baselines, released vs rebuilt | https://www.kaggle.com/code/nateshingleton/swe-graphbench-reproduce-the-audit-and-benchmark |
+| Embeddings notebook (GPU): dense retrieval with documented models | https://www.kaggle.com/code/nateshingleton/swe-graphbench-embeddings |
+
+Generalization pipeline for SWE-bench Verified: `scripts/10_verified_pipeline.py gold | build | bench | summary`
+(needs the 12 upstream repositories cloned under `repos/` and `data_verified/tasks_verified.jsonl` exported from
+`princeton-nlp/SWE-bench_Verified`).
+
 ## Quick start
 
 ```bash

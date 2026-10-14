@@ -107,7 +107,44 @@ def fig3():
     print("fig3 done")
 
 
+
+# ---------------- Figure 4: SWE-bench Verified per repository ----------------
+def fig4():
+    s = json.loads((ROOT / "results_verified" / "summary.json").read_text())
+    rows = [json.loads(l) for l in (ROOT / "results_verified" / "bench_per_task.jsonl").open(encoding="utf-8")]
+    rows = list({r["instance_id"]: r for r in rows}.values())
+    import collections, random
+    by = collections.defaultdict(list)
+    for r in rows:
+        by[r["repo"]].append(r["methods"]["hybrid"]["hit@5"])
+    big = {k: v for k, v in by.items() if len(v) >= 8}
+    small = [x for k, v in by.items() if len(v) < 8 for x in v]
+    if small:
+        big["other (seaborn, flask)"] = small
+    items = sorted(big.items(), key=lambda kv: -sum(kv[1]) / len(kv[1]))
+    def boot(vals, n=2000, seed=0):
+        rng = random.Random(seed); m = []
+        for _ in range(n):
+            smp = [vals[rng.randrange(len(vals))] for _ in vals]; m.append(sum(smp) / len(smp))
+        m.sort(); return m[int(0.025 * n)], m[int(0.975 * n)]
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
+    overall = s["overall"]["methods"]["hybrid"]["hit@5"]["mean"]
+    ax.axvline(overall, color=AXIS, linewidth=1, linestyle="--", zorder=2)
+    ax.text(overall + 0.01, -0.7, f"all 484 tasks: {overall:.2f}", fontsize=7.5, color=INK2, va="center")
+    for i, (repo, vals) in enumerate(items):
+        m = sum(vals) / len(vals); lo, hi = boot(vals)
+        ax.barh(i, m, height=0.6, color=S1, linewidth=0, zorder=3)
+        ax.plot([lo, hi], [i, i], color=INK, linewidth=0.7, alpha=0.6, zorder=4)
+        ax.text(hi + 0.015, i, f"{m:.2f}  (n = {len(vals)})", va="center", fontsize=7.5, color=INK2)
+    ax.set_yticks(range(len(items))); ax.set_yticklabels([k.split("/")[-1] if "/" in k else k for k, _ in items]); ax.invert_yaxis()
+    ax.set_xlim(0, 1.0); ax.set_xlabel("hybrid Hit@5, rebuilt graph, tests filtered")
+    ax.set_title("SWE-bench Verified, per repository (bars: mean, ticks: 95% bootstrap CI)", loc="left", fontsize=9, color=INK2)
+    style(ax)
+    fig.tight_layout(); fig.savefig(FIG / "fig4_verified.png", dpi=220); fig.savefig(FIG / "fig4_verified.svg")
+    print("fig4 done")
+
+
 if __name__ == "__main__":
-    which = sys.argv[1:] or ["1", "2", "3"]
+    which = sys.argv[1:] or ["1", "2", "3", "4"]
     for w in which:
-        {"1": fig1, "2": fig2, "3": fig3}[w]()
+        {"1": fig1, "2": fig2, "3": fig3, "4": fig4}[w]()
